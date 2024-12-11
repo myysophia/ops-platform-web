@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  margin: 0;
+  padding: 0;
+}
+
+/* 登录页面背景动画 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+}
+
+.bg-radial-gradient {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
+  animation: pulse 15s infinite;
+}
+
+/* 统计卡片样式 */
+.dashboard-stat-card {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+}
+
+.dashboard-stat-card .ant-statistic-title {
+  margin-bottom: 8px;
+  color: rgba(0,0,0,0.45);
+}
+
+.dashboard-stat-card .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in forwards;
+} 

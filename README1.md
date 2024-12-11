@@ -285,7 +285,7 @@ router.Use(cors.New(cors.Config{
 在 `src/types/backup.ts` 中定义了核心的数据类型：
 
 ```typescript
-// 备份记录接口 - 一阿里云和AWS的备份���据结构
+// 备份记录接口 - ��一阿里云和AWS的备份数据结构
 export interface BackupRecord {
   key: string;          // 唯一标识，用于React列表渲染
   instance: string;     // 实例名称，如 rm-xxx(阿里云) 或 db-xxx(AWS)
@@ -442,455 +442,189 @@ export const BackupList = () => {
 
 ## 问题处理记录
 
-### 1. 前后端分离重构
-- **问题**: 需要将原有的后端渲染页面改造为前后端分离架构
-- **解决方案**: 
-  1. 创建 Next.js 项目作为前端
-  2. 使用 TypeScript 重写所有组件
-  3. 实现统一的 API 调用层
-  4. 添加完整的类型定义
+### 1. Next.js 配置文件问题
+**问题**: Configuring Next.js via 'next.config.ts' is not supported
 
-### 2. 路由与状态管理
-- **问题**: 原有的后端路由需要改为前端路由
-- **解决方案**:
-  ```typescript
-  // Layout 组件中实现路由映射
-  const getComponent = (key: string) => {
-    switch (key) {
-      case 'dashboard': return <Dashboard />;
-      case 'rds-backup': return <BackupList />;
-      // ...其他路由
-    }
-  };
-  ```
-
-### 3. 用户认证
-- **问题**: 需要实现前端的登录认证机制
-- **解决方案**:
-  ```typescript
-  // 登录状态管理
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
-  }, []);
-
-  // 登录处理
-  const handleLogin = (values: LoginForm) => {
-    if (values.username === 'admin' && values.password === 'admin') {
-      localStorage.setItem('isLoggedIn', 'true');
-      window.location.reload();
-    }
-  };
-  ```
-
-### 4. API 调用封装
-- **问题**: 需要统一管理所有的后端 API 调用
-- **解决方案**:
-  ```typescript
-  // axios 实例配置
-  const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
-    timeout: 10000,
-  });
-
-  // API 服务封装
-  export const backupApi = {
-    getAliBackups: async () => {
-      const { data } = await axios.get('/alirds/list');
-      return data;
-    },
-    // ...其他 API
-  };
-  ```
-
-### 6. 样式系统重构
-- **问题**: 需要统一管理样式，并解决 Tailwind 和 Ant Design 的样式冲突
-- **解决方案**:
-  ```javascript
-  // tailwind.config.js
-  module.exports = {
-    content: ['./src/**/*.{js,ts,jsx,tsx}'],
-    corePlugins: {
-      preflight: false, // 避免样式冲突
-    },
-    theme: {
-      extend: {
-        colors: {
-          primary: '#1890ff',
-        },
+**解决方案**:
+```javascript
+// next.config.js - 使用 JS 而不是 TS
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['antd', '@ant-design/icons'],
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8080/:path*',
       },
-    },
-  };
-  ```
-
-### 7. 组件通信
-- **问题**: 需要实现组件间的数据共享和状态同步
-- **解决方案**:
-  1. 使用 React Query 管理服务端状态：
-  ```typescript
-  const { data, isLoading } = useQuery({
-    queryKey: ['backups'],
-    queryFn: backupApi.getBackups,
-  });
-  ```
-  
-  2. 使用 localStorage 存储全局状态：
-  ```typescript
-  // 存储登录状态
-  localStorage.setItem('isLoggedIn', 'true');
-  
-  // 读取登录状态
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  ```
-  
-  3. 使用 URL 参数共享状态：
-  ```typescript
-  // 更新 URL 参数
-  const updateUrlParams = (key: string, value: string) => {
-    const params = new URLSearchParams(window.location.search);
-    params.set(key, value);
-    window.history.pushState({}, '', `?${params.toString()}`);
-  };
-  ```
-
-## 组件迁移说明
-
-### 1. 登录组件 (Login)
-```typescript
-interface LoginForm {
-    username: string;
-    password: string;
-}
-```
-
-特点：
-- 使用 Tailwind CSS 实现渐变背景和动画效果
-- 使用 Ant Design Form 组件处理表单验证
-- 使用 localStorage 存储登录状态
-
-### 2. 仪表盘组件 (Dashboard)
-```typescript
-interface RecentTask {
-    key: string;
-    name: string;
-    type: string;
-    status: string;
-    time: string;
-}
-```
-
-特点：
-- 使用 Grid 布局展示统计数据
-- 使用 Progress 组件展示进度
-- 使用 Table 组件展示任务列表
-
-### 3. IoTDB备份组件
-```typescript
-interface BackupRecord {
-    instance: string;
-    backupTime: string;
-    size: string;
-    location: string;
-}
-
-interface RestoreRecord {
-    taskId: string;
-    instance: string;
-    restorePoint: string;
-    status: string;
-    duration: string;
-}
-```
-
-特点：
-- 使用 Tabs 组件分离备份和恢复功能
-- 使用 Table 组件展示数据列表
-- 完整的类型定义确保类型安全
-
-### 4. K8s备份组件
-```typescript
-interface BackupRecord {
-    key: string;
-    cluster: string;
-    namespace: string;
-    content: string;
-    time: string;
-    status: string;
-    size: string;
-}
-```
-
-特点：
-- 使用 Modal 组件处理备份和恢复操作
-- 使用 Form 组件处理用户输入
-- 完整的错误处理和加载状态
-
-### 5. K8s信息组件
-```typescript
-interface NodeRecord {
-    key: string;
-    name: string;
-    status: string;
-    cpu: number;
-    memory: number;
-    role: string;
-}
-```
-
-特点：
-- ���用 Card 组件组织不同区块
-- 使用 Progress 组件展示资源使用情况
-- 使用 Alert 组件展示告警信息
-
-### 6. API文档组件
-特点：
-- 使用 iframe 嵌入 Swagger 文档
-- 使用 Layout 组件组织页面结构
-- 使用 Tailwind CSS 处理样式
-
-### 遇到的问题及解决方案
-
-1. Progress 组件 title 属性错误
-```typescript
-// 错误用法
-<Progress title="CPU使用率" />
-
-// 正确用法
-<Progress />
-<div className="text-center mt-2">CPU使用率</div>
-```
-
-2. Button 类型定义错误
-```typescript
-// 错误用法
-<Button type="ghost" />
-
-// 正确用法
-<Button type="default" />
-```
-
-3. React 导入问题
-```typescript
-// 需要显式导入 React
-import React from 'react';
-```
-
-### 代码优化
-
-1. 类型安全
-- 为所有组件添加 TypeScript 接口定义
-- 使用 type 或 interface 定义数据结构
-- 为事件处理函数添加类型声明
-
-2. 性能优化
-- 使用 React.useState 管理状态
-- 合理使用 React.useEffect 处理副作用
-- 避免不必要的重渲染
-
-3. 代码规范
-- 使用 'use client' 指令标记客户端组件
-- 统一使用函数组件和 Hooks
-- 保持组件职责单一
-
-4. 样式处理
-- 使用 Tailwind CSS 处理样式
-- 避免内联样式
-- 保持类名语义化
-
-### 后续优化建议
-
-1. 状态管理
-- 考虑使用 Zustand 管理全局状态
-- 使用 React Query 处理服务端状态
-
-2. 错误处理
-- 添加错误边界
-- 统一的错误提示
-- 完善的错误日志
-
-3. 测试
-- 添加单元测试
-- 添加集成测试
-- 添加端到端测试
-
-## 布局与导航实现
-
-### 1. 布局结构
-```typescript
-// Layout 组件结构
-<AntLayout>
-  <Sider>
-    {/* 左侧导航 */}
-  </Sider>
-  <AntLayout>
-    <Header>
-      {/* 顶部栏 */}
-    </Header>
-    <Content>
-      {/* 内容区域 */}
-    </Content>
-  </AntLayout>
-</AntLayout>
-```
-
-### 2. 导航菜单配置
-```typescript
-const menuItems: MenuItem[] = [
-  {
-    key: 'dashboard',
-    icon: <DashboardOutlined />,
-    label: '工作台',
+    ];
   },
-  {
-    key: 'backup',
-    icon: <DatabaseOutlined />,
-    label: '数据库备份',
-    children: [
-      {
-        key: 'rds-backup',
-        label: 'RDS备份',
-      },
-      {
-        key: 'iotdb-backup',
-        label: 'IoTDB备份',
-      }
-    ]
-  },
-  {
-    key: 'k8s',
-    icon: <CloudServerOutlined />,
-    label: 'K8s管理',
-    children: [
-      {
-        key: 'k8s-backup',
-        label: '集群备份',
-      },
-      {
-        key: 'k8s-info',
-        label: '集群信息',
-      }
-    ]
-  }
-];
-```
-
-### 3. 路由与组件映射
-```typescript
-const getComponent = (key: string) => {
-  switch (key) {
-    case 'dashboard':
-      return <Dashboard />;
-    case 'rds-backup':
-      return <BackupList />;
-    case 'iotdb-backup':
-      return <IoTDBBackup />;
-    case 'k8s-backup':
-      return <K8sBackup />;
-    case 'k8s-info':
-      return <K8sInfo />;
-    default:
-      return <Dashboard />;
-  }
 };
 ```
 
-### 4. 状态管理
-```typescript
-// 菜单折叠状态
-const [collapsed, setCollapsed] = useState(false);
+**说明**:
+- Next.js 不支持 TypeScript 格式的配置文件
+- 需要使用 .js 或 .mjs 格式
+- 可以通过 JSDoc 添加类型提示
 
-// 当前选中的菜单项
-const [selectedKey, setSelectedKey] = useState('dashboard');
+### 2. React Query v5 API 变更
+**问题**: Bad argument type. Starting with v5, only the "Object" form is allowed
+
+**旧代码**:
+```typescript
+useQuery('aliBackups', backupApi.getAliBackups);
+
+useMutation(backupApi.exportToS3, {
+  onSuccess: () => message.success('导出任务已创建')
+});
 ```
 
-### 5. 样式特点
-- 深色主题导航栏 (`background: #001529`)
-- 可折叠的侧边栏
-- 统一的内容区域样式
-- 响应式布局
-
-### 6. 用户交互
-- 菜单项点击切换内容
-- 侧边栏折叠/展开
-- 顶部退出登录功能
-
-### 7. 组件通信
-- 通过 URL 参数共享状态
-- 使用 localStorage 存储登录状态
-- 组件间通过 props 传递数据
-
-### 8. 性能优化
-- 懒加载组件
-- 状态本地化
-- 避免不必要的重渲染
-
-### 9. 最佳实践
-- 使用 TypeScript 类型定义
-- 组件职责单一
-- 统一的错误处理
-- 友好的用户提示
-
-## 问题记录
-
-### 1. 页面闪烁问题
-
-**问题描述**：
-刷新页面时会短暂出现未样式化的登录页面，造成闪烁效果。
-
-**原因分析**：
-1. Next.js 的水合(Hydration)过程：
-   - 服务端首先返回静态 HTML
-   - 客户端加载 JS 并进行水合
-   - 在水合完成前，页面使用原始 HTML 渲染
-
-2. localStorage 访问时机：
-   - localStorage 只能在客户端访问
-   - 初始渲染时无法获取登录状态
-   - 导致先渲染登录页面，然后再切换到实际页面
-
-**解决方案**：
-1. 添加加载状态：
+**新代码**:
 ```typescript
-const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+useQuery({
+  queryKey: ['aliBackups'],
+  queryFn: backupApi.getAliBackups
+});
 
-// 使用 null 表示初始未知状态
-if (isLoggedIn === null) {
-  return <LoadingScreen />;
+useMutation({
+  mutationFn: backupApi.exportToS3,
+  onSuccess: () => message.success('导出任务已创建')
+});
+```
+
+**说明**:
+- v5 版本要求使用对象形式传参
+- queryKey 和 queryFn 需要明确指定
+- mutation 也需要使用 mutationFn 指定函数
+
+### 3. 开发环境配置问题
+**问题**: --turbopack 选项不支持
+
+**解决方案**:
+```json
+{
+  "scripts": {
+    "dev": "next dev",  // 移除 --turbopack
+    "build": "next build",
+    "start": "next start"
+  }
 }
 ```
 
-2. 组件挂载控制：
+**说明**:
+- 较早版本的 Next.js 不支持 Turbopack
+- 需要使用标准的开发服务器配置
+
+### 4. 依赖版本兼容性
+**问题**: 类型定义文件找不到和版本不匹配
+
+**解决方案**:
+```json
+{
+  "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "antd": "^5.0.0",
+    "next": "14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+**说明**:
+- 确保 React 和类型定义版本匹配
+- 使用稳定版本的依赖
+- 避免使用 beta 或 canary 版本
+
+### 5. 前后端联调注意事项
+1. 后端 CORS 配置：
+```go
+router.Use(cors.New(cors.Config{
+  AllowOrigins: []string{"http://localhost:3000"},
+  AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+  AllowHeaders: []string{"Origin", "Content-Type", "Accept"},
+  AllowCredentials: true,
+}))
+```
+
+2. 前端 API 配置：
 ```typescript
-const [mounted, setMounted] = useState(false);
+// .env.development
+NEXT_PUBLIC_API_URL=http://localhost:8080
 
-useEffect(() => {
-  setMounted(true);
-}, []);
-
-if (!mounted) return null;
-```
-
-3. 添加淡入动画：
-```css
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-in forwards;
+// next.config.js
+async rewrites() {
+  return [
+    {
+      source: '/api/:path*',
+      destination: 'http://localhost:8080/:path*',
+    },
+  ];
 }
 ```
 
-**优化效果**：
-- 避免了未样式化内容的显示
-- 提供了平滑的加载过渡
-- 改善了用户体验
+3. 开发流程：
+- 先启动后端服务 (8080端口)
+- 再启动前端服务 (3000端口)
+- 使用 React Query DevTools 调试请求
+- 使用浏览器开发工具监控网络请求
 
-**最佳实践**：
-1. 使用三态状态管理（null | true | false）
-2. 添加加载占位组件
-3. 使用 CSS 动画提供平滑过渡
-4. 控制组件挂载时机
-5. 监听 localStorage 变化
+
+
+# 配置修改
+## npm 安装
+
+配置缓存和安装目录
+```
+E:\>npm config set prefix  "D:\Program Files\nodejs\node_global"
+
+E:\>npm config set cache  "D:\Program Files\nodejs\node_cache"
+
+E:\>npm config get prefix
+D:\Program Files\nodejs\node_global
+```
+
+
+## 配置淘宝镜像
+
+```
+npm config set registry https://registry.npm.taobao.org
+
+npm config get registry
+```
+
+## 配置代理
+
+```
+npm config set proxy http://127.0.0.1:7890
+npm config set https-proxy http://127.0.0.1:7890
+```
+
+## 启动
+```
+# 后端项目目录
+go run main.go
+
+# 前端项目目录
+# 清理并重新安装依赖
+rm -rf node_modules .next
+rm pnpm-lock.yaml
+pnpm install
+
+# 重启开发服务器
+pnpm dev
+```
+
+# 报错处理
+## reason: certificate has expired
+```
+npm cache clean --force
+npm config set strict-ssl false
+```
+
